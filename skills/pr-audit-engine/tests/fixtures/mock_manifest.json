@@ -1,0 +1,30 @@
+{
+  "repo": "owner/test-repo",
+  "ref": "main",
+  "fetched_at": "2026-04-14T10:00:00Z",
+  "tree_truncated": false,
+  "files": [
+    {
+      "path": "CONTRIBUTING.md",
+      "match_type": "exact",
+      "size_bytes": 4821,
+      "status": "ok"
+    },
+    {
+      "path": "README.md",
+      "match_type": "exact",
+      "size_bytes": 2048,
+      "status": "ok"
+    },
+    {
+      "path": ".github/large-workflow.yml",
+      "status": "skipped",
+      "skip_reason": "exceeds MAX_FILE_SIZE_BYTES (612000 bytes)"
+    },
+    {
+      "path": "docs/missing.md",
+      "status": "error",
+      "error": "404 Not Found"
+    }
+  ]
+}

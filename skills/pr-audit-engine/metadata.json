@@ -5,7 +5,8 @@
   "author": "gmcdowelljr",
   "version": "1.0.0",
   "requires": {
-    "open_brain": true
+    "open_brain": true,
+    "tools": ["requests"]
   },
   "tags": ["pr-audit", "validation", "yaml", "ci"],
   "difficulty": "beginner",

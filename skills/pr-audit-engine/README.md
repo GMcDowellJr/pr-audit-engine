@@ -11,6 +11,8 @@ downstream tooling consumes it.
 
 ## Step-by-step instructions
 
+### rider_validate.py
+
 1. Place your rider file at `.github/pr-audit-rider.yaml` in your target
    repository (or any accessible path).
 
@@ -29,6 +31,43 @@ downstream tooling consumes it.
 
 4. Inspect the findings printed to stdout and fix any `ERROR` or `WARN` items
    before proceeding to downstream tools.
+
+### pass1_fetch.py
+
+1. Set the `GITHUB_TOKEN` environment variable to a token with `repo` read
+   access (or `public_repo` for public repositories):
+
+   ```
+   export GITHUB_TOKEN=ghp_...
+   ```
+
+2. Run the fetcher, passing the target repository as `owner/repo`:
+
+   ```
+   python pass1_fetch.py owner/repo
+   ```
+
+3. To write output to a custom directory, use `--output`:
+
+   ```
+   python pass1_fetch.py owner/repo --output /tmp/my-fetch
+   ```
+
+4. To fetch from a specific branch, tag, or SHA, use `--ref`:
+
+   ```
+   python pass1_fetch.py owner/repo --ref my-branch
+   ```
+
+5. Inspect the output directory and `manifest.json` to confirm the expected
+   files were fetched before running `pass1_extract_pre.py`.
+
+   For integration testing against a real repository:
+
+   ```
+   GITHUB_TOKEN=ghp_... python pass1_fetch.py owner/repo --output /tmp/test-fetch
+   cat /tmp/test-fetch/manifest.json
+   ```
 
 ## Expected outcome
 
@@ -96,14 +135,22 @@ any environment where Python 3.11+ and PyYAML are available:
 
 ## Installation
 
-No installation step is required beyond ensuring the dependencies are present:
+No installation step is required beyond ensuring the dependencies are present.
+
+For `rider_validate.py`:
 
 ```
 pip install pyyaml
 ```
 
-Copy `rider_validate.py` to any location on your `PATH` or invoke it directly
-with `python rider_validate.py`.
+For `pass1_fetch.py`:
+
+```
+pip install requests
+```
+
+Copy the scripts to any location on your `PATH` or invoke them directly with
+`python <script>.py`.
 
 ## Trigger Conditions
 
