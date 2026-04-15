@@ -59,6 +59,31 @@ def classify_inject_strategy(path):
 
 
 def normalize_doc(text):
+    # 0. Extract fenced blocks up front so markdown cleanup does not alter
+    #    code/diagram content before fence handling.
+    fenced_blocks = []
+
+    def _stash_fenced_block(match):
+        info_string = (match.group("info") or "").strip()
+        content = match.group("content") or ""
+        language_tag = info_string.split()[0].lower() if info_string else ""
+
+        if language_tag in {"mermaid", "graphviz", "dot", "plantuml"}:
+            replacement = f"[diagram: {language_tag}]\n{content}"
+        else:
+            replacement = content
+
+        token_index = len(fenced_blocks)
+        token = f"<<CODE_FENCE_BLOCK_{token_index}>>"
+        fenced_blocks.append(replacement)
+        return token
+
+    text = re.sub(
+        r"```(?P<info>[^\n`]*)\n(?P<content>[\s\S]*?)```",
+        _stash_fenced_block,
+        text,
+    )
+
     # 1. Remove HTML comments
     text = re.sub(r"<!--[\s\S]*?-->", "", text)
 
@@ -74,8 +99,7 @@ def normalize_doc(text):
     # 5. Strip inline code markers — keep inner text
     text = re.sub(r"`([^`\n]+)`", r"\1", text)
 
-    # 6. Remove code fences (entire block including content)
-    text = re.sub(r"```[\s\S]*?```", "", text)
+    # 6. (fenced blocks already extracted in step 0)
 
     # 7. Strip link syntax — keep display text, drop URL
     text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
@@ -93,7 +117,22 @@ def normalize_doc(text):
     text = re.sub(r"\n{3,}", "\n\n", text)
 
     # 12. Strip leading/trailing whitespace from result
-    return text.strip()
+    text = text.strip()
+
+    # 13. Reinsert preserved fenced block content.
+    def _reinsert_fenced_block(match):
+        token_index = int(match.group("index"))
+        if 0 <= token_index < len(fenced_blocks):
+            return fenced_blocks[token_index]
+        return match.group(0)
+
+    text = re.sub(
+        r"<<CODE_FENCE_BLOCK_(?P<index>\d+)>>",
+        _reinsert_fenced_block,
+        text,
+    )
+
+    return text
 
 
 def write_json(path, data):
@@ -145,6 +184,17 @@ def main():
         else:
             content = normalize_doc(raw_content)
             size_bytes = len(content.encode("utf-8"))
+            raw_size = len(raw_content.encode("utf-8"))
+            if size_bytes == 0 and raw_size > 0:
+                warnings.append({
+                    "code": "ZERO_AFTER_NORMALIZE",
+                    "path": file_entry["path"],
+                    "message": (
+                        f"{file_entry['path']} normalized to empty string "
+                        f"(raw size was {raw_size} bytes) — "
+                        "likely a diagram-only or code-fence-only file"
+                    ),
+                })
 
         if size_bytes > LARGE_FILE_WARNING_BYTES:
             warnings.append({
