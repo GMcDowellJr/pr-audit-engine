@@ -74,8 +74,23 @@ def normalize_doc(text):
     # 5. Strip inline code markers — keep inner text
     text = re.sub(r"`([^`\n]+)`", r"\1", text)
 
-    # 6. Remove code fences (entire block including content)
-    text = re.sub(r"```[\s\S]*?```", "", text)
+    # 6. Remove code fence markers while preserving fenced content.
+    #    Diagram fences are tagged so downstream can treat them specially.
+    def _replace_fenced_block(match):
+        info_string = (match.group("info") or "").strip()
+        content = match.group("content") or ""
+        language_tag = info_string.split()[0].lower() if info_string else ""
+
+        if language_tag in {"mermaid", "graphviz", "dot", "plantuml"}:
+            return f"[diagram: {language_tag}]\n{content}"
+
+        return content
+
+    text = re.sub(
+        r"```(?P<info>[^\n`]*)\n(?P<content>[\s\S]*?)```",
+        _replace_fenced_block,
+        text,
+    )
 
     # 7. Strip link syntax — keep display text, drop URL
     text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
@@ -145,6 +160,17 @@ def main():
         else:
             content = normalize_doc(raw_content)
             size_bytes = len(content.encode("utf-8"))
+            raw_size = len(raw_content.encode("utf-8"))
+            if size_bytes == 0 and raw_size > 0:
+                warnings.append({
+                    "code": "ZERO_AFTER_NORMALIZE",
+                    "path": file_entry["path"],
+                    "message": (
+                        f"{file_entry['path']} normalized to empty string "
+                        f"(raw size was {raw_size} bytes) — "
+                        "likely a diagram-only or code-fence-only file"
+                    ),
+                })
 
         if size_bytes > LARGE_FILE_WARNING_BYTES:
             warnings.append({
