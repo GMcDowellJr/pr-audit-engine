@@ -1,6 +1,6 @@
 """Tests for normalize_doc() in pass1_extract_pre.py.
 
-Each test targets one of the 12 transformation steps independently.
+Each test targets one of the transformation steps independently.
 No file I/O — plain strings only.
 """
 
@@ -45,11 +45,25 @@ def test_step5_strips_inline_code_markers():
     assert normalize_doc("run `git status` here") == "run git status here"
 
 
-def test_step6_removes_code_fences():
-    """Step 6: Remove code fences (entire block including content)."""
-    assert normalize_doc("```\nsome code here\n```") == ""
-    assert normalize_doc("```python\nx = 1\n```") == ""
-    assert normalize_doc("before\n```\ncode\n```\nafter") == "before\n\nafter"
+def test_step6_preserves_fenced_content_without_markers():
+    """Step 6: Strip fence markers while preserving block content."""
+    assert normalize_doc("```\nsome code here\n```") == "some code here\n"
+    assert normalize_doc("```python\nx = 1\n```") == "x = 1\n"
+    assert normalize_doc("before\n```\ncode\n```\nafter") == "before\ncode\n\nafter"
+
+
+def test_step6_diagram_fences_get_diagram_prefix():
+    """Diagram fences should include a [diagram: <lang>] prefix."""
+    assert (
+        normalize_doc("```mermaid\ngraph TD\nA-->B\n```")
+        == "[diagram: mermaid]\ngraph TD\nA-->B\n"
+    )
+
+
+def test_step6_fenced_content_is_not_mutated_by_other_markdown_stripping():
+    """Fenced content should remain verbatim after normalization."""
+    fenced = "```js\nconst s = `x`;\n# not heading\n*not emphasis*\n```"
+    assert normalize_doc(fenced) == "const s = `x`;\n# not heading\n*not emphasis*\n"
 
 
 def test_step7_strips_link_syntax():
