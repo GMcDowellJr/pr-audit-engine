@@ -140,10 +140,14 @@ def identify_candidates(tree):
             })
             seen.add(path)
 
-    # Glob pattern matches
+    # Glob pattern matches (shallow: path depth must equal pattern depth)
     for pattern in CANDIDATE_GLOB_PATTERNS:
         for path, node in tree_nodes.items():
-            if fnmatch.fnmatch(path, pattern) and path not in seen:
+            if (
+                path.count("/") == pattern.count("/")
+                and fnmatch.fnmatch(path, pattern)
+                and path not in seen
+            ):
                 skip = node.get("size", 0) > MAX_FILE_SIZE_BYTES
                 candidates.append({
                     "path": path,
