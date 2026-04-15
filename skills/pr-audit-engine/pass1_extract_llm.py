@@ -241,6 +241,14 @@ def main():
 
     consolidated = json.loads(consolidated_path.read_text(encoding="utf-8"))
 
+    yaml = None
+    if not args.dry_run:
+        try:
+            yaml = get_yaml_module()
+        except RuntimeError as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            sys.exit(1)
+
     # Step 1: Pre-compress summary-strategy files
     for file in consolidated["files"]:
         if (
@@ -277,12 +285,6 @@ def main():
         sys.exit(1)
 
     # Step 5: Parse response
-    try:
-        yaml = get_yaml_module()
-    except RuntimeError as e:
-        print(f"ERROR: {e}", file=sys.stderr)
-        sys.exit(1)
-
     try:
         doc = yaml.safe_load(response_text)
     except yaml.YAMLError:

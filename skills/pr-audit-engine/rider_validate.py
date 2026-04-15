@@ -529,7 +529,8 @@ def parse_rider_document(raw):
             ]
         except json.JSONDecodeError:
             raise RuntimeError(
-                f"{yaml_error} If you cannot install PyYAML, provide the rider in strict JSON format."
+                f"{yaml_error} If you cannot install PyYAML, "
+                "provide the rider in strict JSON format."
             ) from yaml_error
 
     try:
