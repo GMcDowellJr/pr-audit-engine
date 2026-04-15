@@ -66,6 +66,16 @@ def test_step6_fenced_content_is_not_mutated_by_other_markdown_stripping():
     assert normalize_doc(fenced) == "const s = `x`;\n# not heading\n*not emphasis*\n"
 
 
+def test_step6_reinsertion_handles_double_digit_fence_tokens():
+    """Reinsertion should not corrupt placeholders when 11+ fences exist."""
+    blocks = [f"```txt\nblock {i}\n```" for i in range(12)]
+    text = "\n\n".join(blocks)
+    normalized = normalize_doc(text)
+    assert [line for line in normalized.splitlines() if line.startswith("block ")] == [
+        f"block {i}" for i in range(12)
+    ]
+
+
 def test_step7_strips_link_syntax():
     """Step 7: Strip link syntax — keep display text, drop URL."""
     assert normalize_doc("[link text](https://example.com)") == "link text"

@@ -73,8 +73,9 @@ def normalize_doc(text):
         else:
             replacement = content
 
-        token = f"CODE_FENCE_BLOCK_TOKEN_{len(fenced_blocks)}"
-        fenced_blocks.append((token, replacement))
+        token_index = len(fenced_blocks)
+        token = f"<<CODE_FENCE_BLOCK_{token_index}>>"
+        fenced_blocks.append(replacement)
         return token
 
     text = re.sub(
@@ -119,8 +120,17 @@ def normalize_doc(text):
     text = text.strip()
 
     # 13. Reinsert preserved fenced block content.
-    for token, replacement in fenced_blocks:
-        text = text.replace(token, replacement)
+    def _reinsert_fenced_block(match):
+        token_index = int(match.group("index"))
+        if 0 <= token_index < len(fenced_blocks):
+            return fenced_blocks[token_index]
+        return match.group(0)
+
+    text = re.sub(
+        r"<<CODE_FENCE_BLOCK_(?P<index>\d+)>>",
+        _reinsert_fenced_block,
+        text,
+    )
 
     return text
 
