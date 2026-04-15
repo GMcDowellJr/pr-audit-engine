@@ -1,0 +1,27 @@
+{
+  "repo": "owner/test-repo",
+  "ref": "main",
+  "fetched_at": "2026-04-14T10:00:00Z",
+  "extracted_at": "2026-04-14T10:01:00Z",
+  "warnings": [],
+  "files": [
+    {
+      "path": "CONTRIBUTING.md",
+      "inject_strategy": "full",
+      "size_bytes": 147,
+      "content": "Contributing to test-repo\n\nBefore you contribute, please read these guidelines.\n\nCode of Conduct\n\nAll contributors must adhere to our code of conduct."
+    },
+    {
+      "path": "README.md",
+      "inject_strategy": "summary",
+      "size_bytes": 72,
+      "content": "test-repo\n\nA sample repository for testing the pr-audit-engine pipeline."
+    },
+    {
+      "path": ".github/ci.yml",
+      "inject_strategy": "reference",
+      "size_bytes": 0,
+      "content": null
+    }
+  ]
+}
