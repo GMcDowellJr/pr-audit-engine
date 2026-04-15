@@ -1,0 +1,13 @@
+{
+  "name": "pr-audit-engine rider validator",
+  "description": "Validates a pr-audit-rider.yaml file against the rider schema, reporting structural errors, incomplete markers, and quality warnings before downstream tooling consumes it.",
+  "category": "skills",
+  "author": "gmcdowelljr",
+  "version": "1.0.0",
+  "requires": {
+    "open_brain": true
+  },
+  "tags": ["pr-audit", "validation", "yaml", "ci"],
+  "difficulty": "beginner",
+  "estimated_time": "5 minutes"
+}

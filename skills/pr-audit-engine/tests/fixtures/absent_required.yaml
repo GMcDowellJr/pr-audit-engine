@@ -1,0 +1,21 @@
+schema_version: 1
+generated_at: "2024-01-01T00:00:00Z"
+generated_against_sha: "abc1234567890abcdef"
+passes_run: []
+
+# repo_intent_marker is ABSENT — this triggers ERROR: INTENT_ABSENT
+repo_intent_marker: ABSENT
+repo_intent: |
+  This repository implements a CI-gated workflow for evaluating merged pull
+  requests against a structured repository rider specification to detect
+  semantic drift and invariant violations in the codebase.
+
+invariants_marker: FILLED
+invariants:
+  - All changes to the main branch must pass CI before merging.
+
+failure_mode_categories_marker: FILLED
+failure_mode_categories:
+  - name: Silent Failure
+    description: Code that suppresses errors without logging or re-raising them.
+    example: A bare except block that passes silently on a network timeout.
