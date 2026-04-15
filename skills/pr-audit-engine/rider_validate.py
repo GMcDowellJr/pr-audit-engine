@@ -307,8 +307,19 @@ def check_attention_anchors(doc):
         )
         return findings
 
+    if not isinstance(value, dict):
+        findings.append(
+            Finding(
+                field="attention_anchors",
+                severity="ERROR",
+                code="ANCHORS_NOT_MAPPING",
+                message="attention_anchors must be a mapping",
+            )
+        )
+        return findings
+
     PLACEHOLDER = "~"
-    file_anchors = value.get("file_anchors", []) if isinstance(value, dict) else []
+    file_anchors = value.get("file_anchors", [])
     for i, anchor in enumerate(file_anchors):
         if not isinstance(anchor, dict):
             continue
@@ -331,7 +342,7 @@ def check_attention_anchors(doc):
                 )
             )
 
-    pattern_anchors = value.get("pattern_anchors", []) if isinstance(value, dict) else []
+    pattern_anchors = value.get("pattern_anchors", [])
     if len(pattern_anchors) == 0 and len(file_anchors) > 0:
         findings.append(
             Finding(
