@@ -10,6 +10,7 @@ import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote
 
 import requests
 
@@ -96,9 +97,10 @@ def fetch_default_branch(client, owner, repo_name):
 
 
 def fetch_tree(client, owner, repo_name, ref):
+    encoded_ref = quote(ref, safe="")
     response = client.request(
         "GET",
-        f"/repos/{owner}/{repo_name}/git/trees/{ref}",
+        f"/repos/{owner}/{repo_name}/git/trees/{encoded_ref}",
         params={"recursive": "1"},
     )
     truncated = response.get("truncated", False)
