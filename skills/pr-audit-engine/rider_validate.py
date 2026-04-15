@@ -370,6 +370,17 @@ def check_context_docs(doc):
         )
         return findings
 
+    if not isinstance(value, list):
+        findings.append(
+            Finding(
+                field="context_docs",
+                severity="ERROR",
+                code="CONTEXT_DOCS_NOT_LIST",
+                message="context_docs must be a list",
+            )
+        )
+        return findings
+
     VALID_STRATEGIES = ["full", "summary", "reference"]
     PLACEHOLDER = "~"
     for i, entry in enumerate(value):
