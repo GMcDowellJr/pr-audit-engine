@@ -395,6 +395,14 @@ def check_context_docs(doc):
     PLACEHOLDER = "~"
     for i, entry in enumerate(value):
         if not isinstance(entry, dict):
+            findings.append(
+                Finding(
+                    field=f"context_docs[{i}]",
+                    severity="ERROR",
+                    code="CONTEXT_DOC_NOT_DICT",
+                    message=f"context_docs[{i}] is not a mapping",
+                )
+            )
             continue
         if not entry.get("path") or str(entry["path"]).strip() == PLACEHOLDER:
             findings.append(
