@@ -10,9 +10,9 @@ import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import quote
-
-import requests
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlencode
+from urllib.request import Request, urlopen
 
 CANDIDATE_PATHS = [
     # Normative
@@ -51,18 +51,27 @@ class GitHubClient:
 
     def request(self, method, path, params=None):
         url = self.BASE_URL + path
-        response = requests.get(url, headers=self.headers, params=params)
-        if response.status_code == 401:
-            sys.exit("GITHUB_TOKEN is invalid or expired")
-        if response.status_code == 403:
-            sys.exit("GITHUB_TOKEN lacks required permissions")
-        if response.status_code == 404:
-            raise FileNotFoundError
-        if response.status_code == 429:
-            sys.exit("GitHub API rate limit exceeded")
-        if response.status_code >= 500:
-            raise RuntimeError(f"GitHub API error: {response.status_code}")
-        return response.json()
+        if params:
+            url = f"{url}?{urlencode(params)}"
+
+        request = Request(url, headers=self.headers, method=method)
+        try:
+            with urlopen(request) as response:
+                return json.load(response)
+        except HTTPError as error:
+            if error.code == 401:
+                sys.exit("GITHUB_TOKEN is invalid or expired")
+            if error.code == 403:
+                sys.exit("GITHUB_TOKEN lacks required permissions")
+            if error.code == 404:
+                raise FileNotFoundError from error
+            if error.code == 429:
+                sys.exit("GitHub API rate limit exceeded")
+            if error.code >= 500:
+                raise RuntimeError(f"GitHub API error: {error.code}") from error
+            raise RuntimeError(f"GitHub API error: {error.code}") from error
+        except URLError as error:
+            raise RuntimeError(f"Network error while calling GitHub API: {error}") from error
 
 
 def parse_args():
