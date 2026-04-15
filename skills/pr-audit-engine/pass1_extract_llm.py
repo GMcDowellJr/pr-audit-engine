@@ -191,10 +191,21 @@ MARKER GUIDANCE:
 def build_user_prompt(consolidated):
     import json as _json
 
+    prompt_files = []
+    for file in consolidated["files"]:
+        prompt_file = dict(file)
+        if (
+            prompt_file.get("inject_strategy") == "summary"
+            and prompt_file.get("compressed_content") is not None
+        ):
+            prompt_file["content"] = prompt_file["compressed_content"]
+        prompt_file.pop("compressed_content", None)
+        prompt_files.append(prompt_file)
+
     return (
         f"Repository: {consolidated['repo']}\n"
         f"Ref: {consolidated['ref']}\n\n"
-        + _json.dumps(consolidated["files"], indent=2, ensure_ascii=False)
+        + _json.dumps(prompt_files, indent=2, ensure_ascii=False)
         + "\n\n---\nProduce the rider YAML now."
     )
 
@@ -254,6 +265,8 @@ def main():
             and file["content"] is not None
             and len(file["content"].encode("utf-8")) > MIN_COMPRESSION_BYTES
         ):
+            if file.get("compressed_content") is not None:
+                continue
             if args.dry_run:
                 file["compressed_content"] = file["content"]
             else:
