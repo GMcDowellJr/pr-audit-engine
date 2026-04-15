@@ -249,8 +249,8 @@ def main():
     # Step 2: Resolve ref to commit SHA
     resolved_sha = resolve_ref_to_sha(client, owner, repo_name, default_branch)
 
-    # Step 3: Fetch repo tree (recursive, single API call)
-    tree, truncated = fetch_tree(client, owner, repo_name, default_branch)
+    # Step 3: Fetch repo tree at resolved commit SHA (immutable)
+    tree, truncated = fetch_tree(client, owner, repo_name, resolved_sha)
 
     # Step 4: Identify candidate docs
     candidates = identify_candidates(tree)
@@ -265,7 +265,7 @@ def main():
     results = []
     for candidate in candidates:
         result = fetch_and_write(
-            client, owner, repo_name, default_branch,
+            client, owner, repo_name, resolved_sha,
             candidate, output_dir,
         )
         results.append(result)
