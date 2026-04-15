@@ -320,6 +320,16 @@ def check_attention_anchors(doc):
 
     PLACEHOLDER = "~"
     file_anchors = value.get("file_anchors", [])
+    if not isinstance(file_anchors, list):
+        findings.append(
+            Finding(
+                field="file_anchors",
+                severity="ERROR",
+                code="FILE_ANCHORS_NOT_LIST",
+                message="attention_anchors.file_anchors must be a list",
+            )
+        )
+        return findings
     for i, anchor in enumerate(file_anchors):
         if not isinstance(anchor, dict):
             continue
