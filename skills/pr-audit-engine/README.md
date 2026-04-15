@@ -8,6 +8,7 @@ downstream tooling consumes it.
 
 - Python 3.11+
 - [PyYAML](https://pypi.org/project/PyYAML/) (`pip install pyyaml`)
+- [anthropic](https://pypi.org/project/anthropic/) (`pip install anthropic`) — required for `pass1_extract_llm.py`
 
 ## Step-by-step instructions
 
@@ -94,6 +95,60 @@ Must be run after `pass1_fetch.py` and before `pass1_extract_llm.py`.
    files listed as successfully fetched in the manifest but absent on disk.
    The script exits with code `1` when any such warnings are present.
 
+### pass1_extract_llm.py
+
+Must be run after `pass1_extract_pre.py`. Requires `ANTHROPIC_API_KEY`.
+
+1. Set the `ANTHROPIC_API_KEY` environment variable:
+
+   ```
+   export ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+2. Run the LLM extractor, passing the fetch directory as the only positional
+   argument:
+
+   ```
+   python pass1_extract_llm.py .pr-audit-fetch
+   ```
+
+   The script reads `consolidated.json`, optionally pre-compresses
+   `summary`-strategy files with a focused LLM call, assembles an extraction
+   prompt, calls the Anthropic API, validates the response shape, and writes
+   `rider-draft.yaml` to the fetch directory.
+
+3. To skip the API call and write prompts to disk for manual inspection or
+   manual feed (the dry-run escape hatch):
+
+   ```
+   python pass1_extract_llm.py .pr-audit-fetch --dry-run
+   ```
+
+   **Dry-run workflow:**
+   - `system-prompt.txt` and `user-prompt.txt` are written to the fetch
+     directory.
+   - Paste both files into Claude manually.
+   - Save the response as `rider-draft.yaml` in the fetch directory.
+   - Continue with `rider_validate.py` as normal.
+
+4. After a successful run, validate the output before proceeding to any
+   downstream tooling:
+
+   ```
+   python rider_validate.py .pr-audit-fetch/rider-draft.yaml
+   ```
+
+### Full pass1 sequence
+
+Run the four scripts in order against a real repository:
+
+```
+python pass1_fetch.py owner/repo
+python pass1_extract_pre.py .pr-audit-fetch
+python pass1_extract_llm.py .pr-audit-fetch
+python rider_validate.py .pr-audit-fetch/rider-draft.yaml
+```
+
 ## Expected outcome
 
 The script prints a structured findings report and exits with one of three
@@ -177,6 +232,12 @@ pip install requests
 For `pass1_extract_pre.py`:
 
 No additional dependencies — stdlib only.
+
+For `pass1_extract_llm.py`:
+
+```
+pip install anthropic pyyaml
+```
 
 Copy the scripts to any location on your `PATH` or invoke them directly with
 `python <script>.py`.

@@ -6,7 +6,7 @@
   "version": "1.0.0",
   "requires": {
     "open_brain": true,
-    "tools": ["requests"]
+    "tools": ["requests", "anthropic", "pyyaml"]
   },
   "tags": ["pr-audit", "validation", "yaml", "ci"],
   "difficulty": "beginner",
