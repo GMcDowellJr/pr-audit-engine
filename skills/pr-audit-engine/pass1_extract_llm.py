@@ -7,8 +7,6 @@ import os
 import sys
 from pathlib import Path
 
-import yaml
-
 MODEL = "claude-sonnet-4-20250514"
 MAX_TOKENS = 4000
 MIN_COMPRESSION_BYTES = 0  # placeholder — calibrate against RDI
@@ -58,6 +56,18 @@ def call_llm(system_prompt, user_prompt, api_key):
         messages=[{"role": "user", "content": user_prompt}],
     )
     return message.content[0].text
+
+
+def get_yaml_module():
+    try:
+        import yaml
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "The 'PyYAML' package is required for YAML parsing/writing. "
+            "Install dependencies (for example: `pip install pyyaml`)."
+        ) from exc
+
+    return yaml
 
 
 def compress_doc(file, api_key):
@@ -267,6 +277,12 @@ def main():
         sys.exit(1)
 
     # Step 5: Parse response
+    try:
+        yaml = get_yaml_module()
+    except RuntimeError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
+
     try:
         doc = yaml.safe_load(response_text)
     except yaml.YAMLError:
