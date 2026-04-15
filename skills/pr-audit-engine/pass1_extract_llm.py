@@ -319,14 +319,17 @@ def main():
     # Step 6: Validate response shape
     validate_draft_shape(doc)
 
-    # Step 7: Write rider-draft.yaml
+    # Step 7: Stamp resolved commit SHA from consolidated metadata
+    doc["generated_against_sha"] = consolidated.get("generated_against_sha")
+
+    # Step 8: Write rider-draft.yaml
     rider_draft_path = fetch_dir / "rider-draft.yaml"
     rider_draft_path.write_text(
         yaml.dump(doc, default_flow_style=False, allow_unicode=True, sort_keys=False),
         encoding="utf-8",
     )
 
-    # Step 8: Print field status summary
+    # Step 9: Print field status summary
     print(f"Draft rider written to {fetch_dir}/rider-draft.yaml")
     print("Field status:")
     for key in MARKER_KEYS:

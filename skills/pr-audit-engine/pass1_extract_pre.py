@@ -217,6 +217,7 @@ def main():
     consolidated = {
         "repo": manifest["repo"],
         "ref": manifest["ref"],
+        "generated_against_sha": manifest["resolved_sha"],
         "fetched_at": manifest["fetched_at"],
         "extracted_at": datetime.utcnow().isoformat() + "Z",
         "warnings": warnings,
