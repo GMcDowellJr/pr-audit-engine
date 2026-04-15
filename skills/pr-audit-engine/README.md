@@ -69,6 +69,31 @@ downstream tooling consumes it.
    cat /tmp/test-fetch/manifest.json
    ```
 
+### pass1_extract_pre.py
+
+Must be run after `pass1_fetch.py` and before `pass1_extract_llm.py`.
+
+1. Run `pass1_fetch.py` first to populate the fetch directory with raw files
+   and `manifest.json` (see above).
+
+2. Run the pre-extraction normalizer, passing the fetch directory as the only
+   positional argument:
+
+   ```
+   python pass1_extract_pre.py .pr-audit-fetch
+   ```
+
+3. Inspect `consolidated.json` in the fetch directory to confirm files are
+   classified and normalized as expected before running `pass1_extract_llm.py`:
+
+   ```
+   cat .pr-audit-fetch/consolidated.json
+   ```
+
+4. Address any `MISSING_ON_DISK` warnings before proceeding — they indicate
+   files listed as successfully fetched in the manifest but absent on disk.
+   The script exits with code `1` when any such warnings are present.
+
 ## Expected outcome
 
 The script prints a structured findings report and exits with one of three
@@ -148,6 +173,10 @@ For `pass1_fetch.py`:
 ```
 pip install requests
 ```
+
+For `pass1_extract_pre.py`:
+
+No additional dependencies — stdlib only.
 
 Copy the scripts to any location on your `PATH` or invoke them directly with
 `python <script>.py`.
