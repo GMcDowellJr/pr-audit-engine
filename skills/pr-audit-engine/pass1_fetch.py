@@ -175,8 +175,8 @@ def fetch_and_write(client, owner, repo_name, ref, candidate, output_dir):
         raw_bytes = base64.b64decode(response["content"])
         try:
             content = raw_bytes.decode("utf-8")
-        except UnicodeDecodeError:
-            raise ValueError("binary or non-UTF-8 file")
+        except UnicodeDecodeError as e:
+            raise ValueError("binary or non-UTF-8 file") from e
 
         local_path = output_dir / candidate["path"]
         local_path.parent.mkdir(parents=True, exist_ok=True)
