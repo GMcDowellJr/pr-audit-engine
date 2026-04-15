@@ -7,7 +7,6 @@ import os
 import sys
 from pathlib import Path
 
-import anthropic
 import yaml
 
 MODEL = "claude-sonnet-4-20250514"
@@ -43,6 +42,14 @@ def parse_args():
 
 
 def call_llm(system_prompt, user_prompt, api_key):
+    try:
+        import anthropic
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "The 'anthropic' package is required for live LLM calls. "
+            "Install dependencies (for example: `pip install anthropic`)."
+        ) from exc
+
     client = anthropic.Anthropic(api_key=api_key)
     message = client.messages.create(
         model=MODEL,
@@ -207,7 +214,7 @@ def main():
     fetch_dir = Path(args.fetch_dir)
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
+    if not args.dry_run and not api_key:
         print(
             "ERROR: ANTHROPIC_API_KEY environment variable not set",
             file=sys.stderr,
