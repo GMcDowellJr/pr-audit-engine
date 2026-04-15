@@ -4,8 +4,6 @@ import os
 import sys
 from dataclasses import dataclass
 
-import yaml
-
 
 @dataclass
 class Finding:
@@ -500,6 +498,47 @@ def parse_args():
     return parser.parse_args()
 
 
+def get_yaml_module():
+    try:
+        import yaml
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "The 'PyYAML' package is required to parse rider YAML files. "
+            "Install dependencies (for example: `pip install pyyaml`)."
+        ) from exc
+
+    return yaml
+
+
+def parse_rider_document(raw):
+    """Parse rider content with PyYAML when available, or JSON as fallback."""
+    try:
+        yaml = get_yaml_module()
+    except RuntimeError as yaml_error:
+        try:
+            return json.loads(raw), [
+                Finding(
+                    field=None,
+                    severity="INFO",
+                    code="JSON_FALLBACK_USED",
+                    message=(
+                        "PyYAML is not installed; parsed rider as JSON fallback "
+                        "(YAML syntax beyond JSON is not supported in this mode)."
+                    ),
+                )
+            ]
+        except json.JSONDecodeError:
+            raise RuntimeError(
+                f"{yaml_error} If you cannot install PyYAML, "
+                "provide the rider in strict JSON format."
+            ) from yaml_error
+
+    try:
+        return yaml.safe_load(raw), []
+    except yaml.YAMLError as e:
+        raise ValueError(f"YAML parse error: {e}") from e
+
+
 def main():
     args = parse_args()
     findings = []
@@ -520,8 +559,20 @@ def main():
         raw = fh.read()
 
     try:
-        doc = yaml.safe_load(raw)
-    except yaml.YAMLError as e:
+        doc, parse_findings = parse_rider_document(raw)
+        findings += parse_findings
+    except RuntimeError as e:
+        findings.append(
+            Finding(
+                field=None,
+                severity="ERROR",
+                code="YAML_DEPENDENCY_MISSING",
+                message=str(e),
+            )
+        )
+        emit_output(findings, args.format)
+        sys.exit(1)
+    except ValueError as e:
         findings.append(
             Finding(
                 field=None,

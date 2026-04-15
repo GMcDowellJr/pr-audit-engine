@@ -7,9 +7,6 @@ import os
 import sys
 from pathlib import Path
 
-import anthropic
-import yaml
-
 MODEL = "claude-sonnet-4-20250514"
 MAX_TOKENS = 4000
 MIN_COMPRESSION_BYTES = 0  # placeholder — calibrate against RDI
@@ -43,6 +40,14 @@ def parse_args():
 
 
 def call_llm(system_prompt, user_prompt, api_key):
+    try:
+        import anthropic
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "The 'anthropic' package is required for live LLM calls. "
+            "Install dependencies (for example: `pip install anthropic`)."
+        ) from exc
+
     client = anthropic.Anthropic(api_key=api_key)
     message = client.messages.create(
         model=MODEL,
@@ -51,6 +56,18 @@ def call_llm(system_prompt, user_prompt, api_key):
         messages=[{"role": "user", "content": user_prompt}],
     )
     return message.content[0].text
+
+
+def get_yaml_module():
+    try:
+        import yaml
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "The 'PyYAML' package is required for YAML parsing/writing. "
+            "Install dependencies (for example: `pip install pyyaml`)."
+        ) from exc
+
+    return yaml
 
 
 def compress_doc(file, api_key):
@@ -207,7 +224,7 @@ def main():
     fetch_dir = Path(args.fetch_dir)
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
+    if not args.dry_run and not api_key:
         print(
             "ERROR: ANTHROPIC_API_KEY environment variable not set",
             file=sys.stderr,
@@ -223,6 +240,14 @@ def main():
         sys.exit(1)
 
     consolidated = json.loads(consolidated_path.read_text(encoding="utf-8"))
+
+    yaml = None
+    if not args.dry_run:
+        try:
+            yaml = get_yaml_module()
+        except RuntimeError as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            sys.exit(1)
 
     # Step 1: Pre-compress summary-strategy files
     for file in consolidated["files"]:
