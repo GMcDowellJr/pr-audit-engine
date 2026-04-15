@@ -59,6 +59,30 @@ def classify_inject_strategy(path):
 
 
 def normalize_doc(text):
+    # 0. Extract fenced blocks up front so markdown cleanup does not alter
+    #    code/diagram content before fence handling.
+    fenced_blocks = []
+
+    def _stash_fenced_block(match):
+        info_string = (match.group("info") or "").strip()
+        content = match.group("content") or ""
+        language_tag = info_string.split()[0].lower() if info_string else ""
+
+        if language_tag in {"mermaid", "graphviz", "dot", "plantuml"}:
+            replacement = f"[diagram: {language_tag}]\n{content}"
+        else:
+            replacement = content
+
+        token = f"CODE_FENCE_BLOCK_TOKEN_{len(fenced_blocks)}"
+        fenced_blocks.append((token, replacement))
+        return token
+
+    text = re.sub(
+        r"```(?P<info>[^\n`]*)\n(?P<content>[\s\S]*?)```",
+        _stash_fenced_block,
+        text,
+    )
+
     # 1. Remove HTML comments
     text = re.sub(r"<!--[\s\S]*?-->", "", text)
 
@@ -74,23 +98,7 @@ def normalize_doc(text):
     # 5. Strip inline code markers — keep inner text
     text = re.sub(r"`([^`\n]+)`", r"\1", text)
 
-    # 6. Remove code fence markers while preserving fenced content.
-    #    Diagram fences are tagged so downstream can treat them specially.
-    def _replace_fenced_block(match):
-        info_string = (match.group("info") or "").strip()
-        content = match.group("content") or ""
-        language_tag = info_string.split()[0].lower() if info_string else ""
-
-        if language_tag in {"mermaid", "graphviz", "dot", "plantuml"}:
-            return f"[diagram: {language_tag}]\n{content}"
-
-        return content
-
-    text = re.sub(
-        r"```(?P<info>[^\n`]*)\n(?P<content>[\s\S]*?)```",
-        _replace_fenced_block,
-        text,
-    )
+    # 6. (fenced blocks already extracted in step 0)
 
     # 7. Strip link syntax — keep display text, drop URL
     text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
@@ -108,7 +116,13 @@ def normalize_doc(text):
     text = re.sub(r"\n{3,}", "\n\n", text)
 
     # 12. Strip leading/trailing whitespace from result
-    return text.strip()
+    text = text.strip()
+
+    # 13. Reinsert preserved fenced block content.
+    for token, replacement in fenced_blocks:
+        text = text.replace(token, replacement)
+
+    return text
 
 
 def write_json(path, data):
