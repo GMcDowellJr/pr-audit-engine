@@ -510,6 +510,34 @@ def get_yaml_module():
     return yaml
 
 
+def parse_rider_document(raw):
+    """Parse rider content with PyYAML when available, or JSON as fallback."""
+    try:
+        yaml = get_yaml_module()
+    except RuntimeError as yaml_error:
+        try:
+            return json.loads(raw), [
+                Finding(
+                    field=None,
+                    severity="INFO",
+                    code="JSON_FALLBACK_USED",
+                    message=(
+                        "PyYAML is not installed; parsed rider as JSON fallback "
+                        "(YAML syntax beyond JSON is not supported in this mode)."
+                    ),
+                )
+            ]
+        except json.JSONDecodeError:
+            raise RuntimeError(
+                f"{yaml_error} If you cannot install PyYAML, provide the rider in strict JSON format."
+            ) from yaml_error
+
+    try:
+        return yaml.safe_load(raw), []
+    except yaml.YAMLError as e:
+        raise ValueError(f"YAML parse error: {e}") from e
+
+
 def main():
     args = parse_args()
     findings = []
@@ -530,7 +558,8 @@ def main():
         raw = fh.read()
 
     try:
-        yaml = get_yaml_module()
+        doc, parse_findings = parse_rider_document(raw)
+        findings += parse_findings
     except RuntimeError as e:
         findings.append(
             Finding(
@@ -542,10 +571,7 @@ def main():
         )
         emit_output(findings, args.format)
         sys.exit(1)
-
-    try:
-        doc = yaml.safe_load(raw)
-    except yaml.YAMLError as e:
+    except ValueError as e:
         findings.append(
             Finding(
                 field=None,
