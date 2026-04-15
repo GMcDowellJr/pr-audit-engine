@@ -150,6 +150,14 @@ def main():
         sys.exit(1)
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    generated_against_sha = manifest.get("resolved_sha") or manifest.get("ref")
+
+    if generated_against_sha is None:
+        print(
+            "ERROR: manifest must include at least one of resolved_sha or ref",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     ok_files = [f for f in manifest["files"] if f["status"] == "ok"]
 
@@ -217,6 +225,7 @@ def main():
     consolidated = {
         "repo": manifest["repo"],
         "ref": manifest["ref"],
+        "generated_against_sha": generated_against_sha,
         "fetched_at": manifest["fetched_at"],
         "extracted_at": datetime.utcnow().isoformat() + "Z",
         "warnings": warnings,

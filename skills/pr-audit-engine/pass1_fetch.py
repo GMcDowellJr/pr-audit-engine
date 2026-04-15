@@ -122,6 +122,12 @@ def fetch_tree(client, owner, repo_name, ref):
     return response["tree"], truncated
 
 
+def resolve_ref_to_sha(client, owner, repo_name, ref):
+    encoded_ref = quote(ref, safe="")
+    response = client.request("GET", f"/repos/{owner}/{repo_name}/commits/{encoded_ref}")
+    return response["sha"]
+
+
 def identify_candidates(tree):
     tree_nodes = {
         node["path"]: node
@@ -240,38 +246,42 @@ def main():
     else:
         default_branch = args.ref
 
-    # Step 2: Fetch repo tree (recursive, single API call)
-    tree, truncated = fetch_tree(client, owner, repo_name, default_branch)
+    # Step 2: Resolve ref to commit SHA
+    resolved_sha = resolve_ref_to_sha(client, owner, repo_name, default_branch)
 
-    # Step 3: Identify candidate docs
+    # Step 3: Fetch repo tree at resolved commit SHA (immutable)
+    tree, truncated = fetch_tree(client, owner, repo_name, resolved_sha)
+
+    # Step 4: Identify candidate docs
     candidates = identify_candidates(tree)
 
-    # Step 4: Create output directory
+    # Step 5: Create output directory
     output_dir = Path(args.output)
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True)
 
-    # Step 5: Fetch and write each candidate
+    # Step 6: Fetch and write each candidate
     results = []
     for candidate in candidates:
         result = fetch_and_write(
-            client, owner, repo_name, default_branch,
+            client, owner, repo_name, resolved_sha,
             candidate, output_dir,
         )
         results.append(result)
 
-    # Step 6: Write manifest.json
+    # Step 7: Write manifest.json
     manifest = {
         "repo": args.repo,
         "ref": default_branch,
+        "resolved_sha": resolved_sha,
         "fetched_at": datetime.utcnow().isoformat() + "Z",
         "tree_truncated": truncated,
         "files": results,
     }
     write_json(output_dir / "manifest.json", manifest)
 
-    # Step 7: Print summary
+    # Step 8: Print summary
     n_ok = sum(1 for r in results if r["status"] == "ok")
     n_skipped = sum(1 for r in results if r["status"] == "skipped")
     n_errors = sum(1 for r in results if r["status"] == "error")

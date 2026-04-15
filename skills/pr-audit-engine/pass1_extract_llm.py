@@ -104,7 +104,11 @@ Preserve meaning over brevity when they conflict.
         return file["content"]
 
 
-def build_system_prompt():
+def build_system_prompt(generated_against_sha=None):
+    generated_against_sha_line = "generated_against_sha: null"
+    if generated_against_sha:
+        generated_against_sha_line = f'generated_against_sha: "{generated_against_sha}"'
+
     return """You are analyzing a software repository to produce a structured
 evaluation rider — a YAML document that captures the repo's intent,
 hard invariants, and failure mode categories for use in automated
@@ -138,7 +142,7 @@ SCHEMA:
 
 schema_version: 1
 generated_at: <ISO timestamp>
-generated_against_sha: null
+{generated_against_sha_line}
 passes_run: [pass1]
 
 repo_intent_marker: <FILLED|PARTIAL|ABSENT|INFERRED>
@@ -185,7 +189,7 @@ MARKER GUIDANCE:
   PARTIAL  — some evidence, gaps remain
   INFERRED — reasonable inference, no explicit statement
   ABSENT   — no evidence — set field value to null
-"""
+""".format(generated_against_sha_line=generated_against_sha_line)
 
 
 def build_user_prompt(consolidated):
@@ -274,7 +278,7 @@ def main():
                 file["compressed_content"] = compressed
 
     # Step 2: Assemble prompts
-    system_prompt = build_system_prompt()
+    system_prompt = build_system_prompt(consolidated.get("generated_against_sha"))
     user_prompt = build_user_prompt(consolidated)
 
     # Step 3: Dry-run path
@@ -319,14 +323,17 @@ def main():
     # Step 6: Validate response shape
     validate_draft_shape(doc)
 
-    # Step 7: Write rider-draft.yaml
+    # Step 7: Stamp resolved commit SHA from consolidated metadata
+    doc["generated_against_sha"] = consolidated.get("generated_against_sha")
+
+    # Step 8: Write rider-draft.yaml
     rider_draft_path = fetch_dir / "rider-draft.yaml"
     rider_draft_path.write_text(
         yaml.dump(doc, default_flow_style=False, allow_unicode=True, sort_keys=False),
         encoding="utf-8",
     )
 
-    # Step 8: Print field status summary
+    # Step 9: Print field status summary
     print(f"Draft rider written to {fetch_dir}/rider-draft.yaml")
     print("Field status:")
     for key in MARKER_KEYS:
