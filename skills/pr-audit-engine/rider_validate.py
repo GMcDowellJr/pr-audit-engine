@@ -4,8 +4,6 @@ import os
 import sys
 from dataclasses import dataclass
 
-import yaml
-
 
 @dataclass
 class Finding:
@@ -500,6 +498,18 @@ def parse_args():
     return parser.parse_args()
 
 
+def get_yaml_module():
+    try:
+        import yaml
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "The 'PyYAML' package is required to parse rider YAML files. "
+            "Install dependencies (for example: `pip install pyyaml`)."
+        ) from exc
+
+    return yaml
+
+
 def main():
     args = parse_args()
     findings = []
@@ -518,6 +528,20 @@ def main():
 
     with open(args.rider_path) as fh:
         raw = fh.read()
+
+    try:
+        yaml = get_yaml_module()
+    except RuntimeError as e:
+        findings.append(
+            Finding(
+                field=None,
+                severity="ERROR",
+                code="YAML_DEPENDENCY_MISSING",
+                message=str(e),
+            )
+        )
+        emit_output(findings, args.format)
+        sys.exit(1)
 
     try:
         doc = yaml.safe_load(raw)
