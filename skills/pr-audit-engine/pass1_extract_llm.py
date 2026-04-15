@@ -113,6 +113,20 @@ PR review.
 You will be given the contents of key repository documents.
 Your job is to extract signal, not summarize prose.
 
+Documents are provided as a JSON array in the user message. Each
+entry has path, inject_strategy, size_bytes, and content fields.
+
+Weighting rules by inject_strategy:
+  full      — normative documents. Treat statements here as
+              authoritative constraints. Ground all invariants
+              and failure modes in these files first.
+  summary   — structural context. Use to understand the system
+              and populate attention_anchors and context_docs.
+              Do not elevate to invariant without full support
+              from a full-strategy document.
+  reference — existence noted only. content will be null.
+              Do not use as evidence.
+
 Output ONLY valid YAML matching the schema below.
 No preamble. No explanation. No markdown fences.
 If you cannot fill a field from the available evidence,
@@ -175,30 +189,14 @@ MARKER GUIDANCE:
 
 
 def build_user_prompt(consolidated):
-    lines = []
-    lines.append(f"Repository: {consolidated['repo']}")
-    lines.append(f"Ref: {consolidated['ref']}")
-    lines.append("")
+    import json as _json
 
-    for file in consolidated["files"]:
-        if file["inject_strategy"] == "reference" or file["content"] is None:
-            lines.append(f"[REFERENCE ONLY]: {file['path']}")
-            continue
-
-        if file["inject_strategy"] == "full":
-            lines.append(f"=== {file['path']} ===")
-            lines.append(file["content"])
-            lines.append("")
-        elif file["inject_strategy"] == "summary":
-            content = file.get("compressed_content", file["content"])
-            lines.append(f"=== {file['path']} (compressed) ===")
-            lines.append(content)
-            lines.append("")
-
-    lines.append("---")
-    lines.append("Produce the rider YAML now.")
-
-    return "\n".join(lines)
+    return (
+        f"Repository: {consolidated['repo']}\n"
+        f"Ref: {consolidated['ref']}\n\n"
+        + _json.dumps(consolidated["files"], indent=2, ensure_ascii=False)
+        + "\n\n---\nProduce the rider YAML now."
+    )
 
 
 def validate_draft_shape(doc):
