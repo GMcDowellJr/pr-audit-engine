@@ -1,154 +1,80 @@
-# Python Project Template — CI + Guardrails
+# pr-audit-engine
 
-This repository is a **starter template** for Python projects that want:
-- automated quality checks from day one
-- fast local iteration
-- early detection of error-handling and semantic drift issues
+A general-purpose engine for automated PR review against documented repo intent.
 
-It is intentionally **minimal and opinionated**.
+Repos accumulate rules — contribution guidelines, architectural invariants, coding standards, safety constraints. Enforcing them consistently across PRs requires either human vigilance or bespoke automation built from scratch per repo. This engine provides the reusable layer: structured evaluation of a PR against the repo’s own documentation, with an AI judgment layer on top of deterministic checks.
 
----
+The reference implementation is the [Open Brain (OB1)](https://github.com/openmemory/open-brain) repo, which runs a two-layer review pipeline: a deterministic gate checking ~15 structural rules, followed by Claude evaluating mission fit, design patterns, clarity, and scope. This engine extracts that pattern into something any repo can adopt without rebuilding the plumbing.
 
-## What this template guarantees
+-----
 
-From the first commit:
+## How it works
 
-- ✅ **Continuous Integration (CI)** runs on every push and pull request
-- ✅ **Linting** catches common correctness and robustness issues
-- ✅ **Tests** must pass before code can be merged
-- ✅ Rules are **explicit, versioned, and automated**
-- ✅ “Works on my machine” failures are reduced by clean CI environments
+**Layer 1 — Deterministic gate**
 
-This template focuses on **how code is merged**, not what the code does.
+Checks that can be expressed as rules without judgment: required files present, metadata valid, no credentials, no dangerous SQL, correct folder structure, PR title format, internal links resolve. These run fast and fail loudly. A PR that can’t pass the gate doesn’t reach the AI layer.
 
----
+**Layer 2 — AI evaluation**
 
-## What this template does *not* guarantee
+Reads the PR diff and description against the repo’s documented intent. Evaluates things the gate can’t: whether the contribution actually fits the stated mission, whether the README instructions are clear enough for the target audience, whether design patterns match what the repo declares as correct, whether the scope is right or drifting.
 
-- ❌ Correct algorithms or domain logic
-- ❌ Complete test coverage
-- ❌ Optimal performance
-- ❌ Freedom from design mistakes
+The AI layer is explicitly prompted to reason about:
 
-Those emerge during design and integration.  
-The goal here is to make problems **visible early and cheaply**, not to eliminate them magically.
+- **Alignment with documented intent** — does this match what CONTRIBUTING.md, CLAUDE.md, or equivalent docs say the repo is for?
+- **Silent failure modes** — does the code fail quietly in ways reviewers are likely to miss?
+- **API contracts** — does anything in the diff or unaddressed review comments point to a contract violation?
+- **Output correctness** — does the change produce correct results across the edge cases reviewers raised?
 
----
+**Separation of concerns**
 
-## Included tooling
+The gate handles what’s checkable. The AI layer handles what requires judgment. Neither substitutes for the other.
 
-- **pytest** — automated tests
-- **ruff** — fast static analysis (linting)
-- **GitHub Actions** — CI execution
-- **pyproject.toml** — single source of tool configuration
+-----
 
-All tooling is optional to extend, but none is optional to bypass once enabled.
+## Repo-specific riders
 
----
+The engine is repo-agnostic. What makes it useful for a specific repo is the **rider** — a config or module that supplies:
 
-## Repository structure (baseline)
+- **Invariants** — rules the repo enforces that aren’t universally applicable (e.g., “no local MCP servers,” “pagination must always be complete,” “no modifications to the core `thoughts` table”)
+- **Context documents** — CONTRIBUTING.md, CLAUDE.md, architecture docs, or any other docs the AI layer should reason against
+- **Prompt anchors** — evaluation focus areas specific to this codebase or contribution category
 
-- `.github/workflows/ci.yml`  
-  CI pipeline (lint + tests on PRs and pushes)
+A default rider ships with the engine and applies general software engineering heuristics. Repos supply their own to get targeted, policy-aware analysis.
 
-- `pyproject.toml`  
-  Tool configuration (ruff, pytest)
+-----
 
-- `requirements-dev.txt`  
-  Development dependencies (testing, linting)
+## Delivery
 
-- `tests/`  
-  Test suite (starts minimal; grows over time)
+The engine is delivery-agnostic. It can run as:
 
-- `CONTRIBUTING.md`  
-  Contribution and workflow rules
+- A **GitHub Action** — triggered on PR open/sync, or on manual dispatch for retrospective review
+- A **local script or CLI** — for one-off audits or pre-push checks
+- A **Claude skill** — for interactive use inside Claude Code or similar clients
 
----
+The OB1 reference implementation runs as a GitHub Action (deterministic gate on PR events, Claude review on workflow completion for trusted contributors). Other delivery forms are appropriate for other use cases.
 
-## Local setup
+-----
 
-Create and activate a virtual environment:
+## Directions
 
-    python -m venv .venv
-    source .venv/Scripts/activate   # Windows (Git Bash)
-    python -m pip install --upgrade pip
-    pip install -r requirements-dev.txt
-    if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+Active areas of development beyond the core pattern:
 
-Run checks locally:
+- **CONTRIBUTING.md compliance review** — evaluate merged PRs against declared rules; surface merges that bypassed stated policy after the fact
+- **Unresolved comment audit** — fetch merged PRs and identify review comments that were resolved without a corresponding code change; evaluate whether the concern was substantively addressed
+- **Pseudocode-to-implementation delta** — compare stated intent in PR description or design comments against what was actually merged
+- **Cache regression detection** — identify review comments that flagged caching or memoization behavior; verify the concern was handled
+- **Skill formalization** — package the AI evaluation logic as a portable Claude skill
 
-    ruff check .
-    pytest
+-----
 
-CI will run the same checks automatically.
+## Status
 
----
+Early design phase. Pseudocode precedes code. Gaps surface before revisions are written.
 
-## Development workflow (expected)
+The OB1 implementation is the working reference. Generalization into a standalone engine is in progress.
 
-1. Create a feature branch
-2. Make changes
-3. Run:
-   - ruff check .
-   - pytest
-4. Commit and push
-5. Open a pull request
-6. Merge only when CI is green
+-----
 
-If CI fails, the code is not ready to merge.
+## Contributing
 
----
-
-## Design philosophy
-
-This template assumes:
-
-- Bugs are cheaper to fix when found early
-- Silent failures are worse than loud ones
-- Inconsistency spreads unless actively constrained
-- Automation beats memory and good intentions
-
-It is designed to **support adversarial review**, not replace it.
-
----
-
-## When to extend this template
-
-Add rules or tooling only when:
-- the same issue has appeared in multiple projects
-- the rule is clearly non-project-specific
-- the cost of enforcement is lower than the cost of drift
-
-Keep the template boring. Let projects be interesting.
-
----
-
-## Using this repository as a template
-
-This repository is intended to be marked as a **GitHub template repository**.
-New projects should be created from it rather than copied manually.
-
-Each new repository gets:
-- a fresh Git history
-- the same guardrails
-- freedom to evolve independently
-
----
-
-## Questions this template intentionally answers
-
-- “How do we know code is safe to merge?”
-- “What runs automatically, and when?”
-- “What rules are non-negotiable?”
-
-Questions it intentionally does not answer:
-
-- “Is this the best design?”
-- “Is this fast enough?”
-- “Is this the right abstraction?”
-
-Those belong to design and review—not scaffolding.
-
----
-
-If this README ever needs to explain *why* the rules exist, the template has already failed.
+Design proposals and pseudocode welcome. Open an issue before writing implementation.
